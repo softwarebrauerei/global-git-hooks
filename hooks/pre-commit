@@ -1,0 +1,20 @@
+#!/bin/bash
+# This script runs trivy scan before commiting the code
+
+# ensure trivy is installed
+set -e
+if command -v trivyx &> /dev/null
+then
+    echo "trivy run using installed binary..."
+    trivy fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs .terraform --skip-files terraform.tfvars --scanners vuln,misconfig,secret . 
+    exit 0
+elif command -v docker &> /dev/null
+then
+    echo "trivy run using docker..."
+    echo "Consider installing trivy for better performance using 'brew install trivy'"
+    docker run --rm -v $(pwd):/workdir aquasec/trivy:latest fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs .terraform --skip-files terraform.tfvars --scanners vuln,misconfig,secret /workdir
+    exit 0
+else
+    echo "either trivy or docker is required to run this script".
+    exit 1
+fi
