@@ -3,7 +3,7 @@
 
 # ensure trivy is installed
 set -e
-if command -v trivyx &> /dev/null
+if command -v trivy &> /dev/null
 then
     echo "trivy run using installed binary..."
     trivy fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs .terraform --skip-files terraform.tfvars --scanners vuln,misconfig,secret . 

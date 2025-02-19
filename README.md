@@ -9,8 +9,7 @@ Open a terminal and run the following commands:
 git clone https://github.com/softwarebrauerei/global-git-hooks.git ~/.sobr-global-git-hooks
 git config --global core.hooksPath ~/.sobr-global-git-hooks/hooks
 ```
-
 or run the script directly using 
 ```bash
-curl https://
+curl https://raw.githubusercontent.com/softwarebrauerei/global-git-hooks/refs/heads/main/install.sh | bash
 ```
