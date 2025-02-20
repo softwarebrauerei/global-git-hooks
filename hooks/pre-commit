@@ -1,18 +1,45 @@
 #!/bin/bash
 # This script runs trivy scan before commiting the code
 
+# if not git origins contains softwarebrauerei repositories then skip trivy scan
+if ! git remote -v | grep -qE "github.com:softwarebrauerei|bitbucket.org:sobr"
+then
+    echo "Skipping trivy scan as the repository is not from softwarebrauerei"
+    exit 0
+fi
+
+# if .sobr-trivy-ignore file is present and it's included in .gitignore file then skip trivy scan
+if [ -f .sobr-trivy-ignore ] 
+then
+    if grep -q ".sobr-trivy-ignore" .gitignore
+    then
+        echo "Skipping trivy scan as .sobr-trivy-ignore file is present and it's included in .gitignore file"
+        exit 0
+    else
+        echo "Skipping trivy scan as .sobr-trivy-ignore file is present. But it's not included in .gitignore file".
+        echo "Please include .sobr-trivy-ignore file in .gitignore file to disable trivy scan on pre-commit and commit again."
+        exit 1
+    fi
+fi
+
 # ensure trivy is installed
 set -e
+SKIP_FILES=""
+
+# check if *.tfvars or terraform.tfvars  is included in .gitignore file
+if grep -q "terraform.tfvars" .gitignore || grep -q "*.tfvars" .gitignore
+then
+    SKIP_FILES="--skip-files \"**/terraform.tfvars\"  --skip-files \"**/*.tfvars\""
+fi
+
 if command -v trivy &> /dev/null
 then
-    echo "trivy run using installed binary..."
-    trivy fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs .terraform --skip-files terraform.tfvars --scanners vuln,misconfig,secret . 
+    trivy fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs \"\*\*/.terraform\" $SKIP_FILES --scanners vuln,misconfig,secret . 
     exit 0
 elif command -v docker &> /dev/null
 then
-    echo "trivy run using docker..."
     echo "Consider installing trivy for better performance using 'brew install trivy'"
-    docker run --rm -v $(pwd):/workdir aquasec/trivy:latest fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs .terraform --skip-files terraform.tfvars --scanners vuln,misconfig,secret /workdir
+    docker run --rm -v $(pwd):/workdir -w /workdir aquasec/trivy:latest fs -q --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --tf-exclude-downloaded-modules --skip-dirs \"\*\*/.terraform\" $SKIP_FILES --scanners vuln,misconfig,secret .
     exit 0
 else
     echo "either trivy or docker is required to run this script".
